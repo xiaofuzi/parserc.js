@@ -2,7 +2,24 @@ var pr = require('../lib/parserc'),
     state = require('../lib/state');
 
 
-var parser = {};
+var parser = {
+    /*
+     * expr   : term ((PLUS | MINUS) term)*      
+     * term   : factor ((MUL | DIV) factor)*
+     * factor : INTEGER
+     */
+    expr: function(state) {
+    	return pr.sequence(
+            parser.term,
+            pr.zeromore(
+                pr.and(
+                    parser.operater01,
+                    parser.term
+                )
+            )
+        )(state);
+    }
+};
 
 /*
  * [+, -]
@@ -32,13 +49,22 @@ parser.num = pr.or(
 )
 
 /*
+ * parent_factor
+ */
+parser.parent_factor = pr.sequence(
+    pr.literal('('),
+    parser.expr,
+    pr.literal(')')
+)
+
+/*
  * factor: INTEGER | expr
  */
-// parser.factor = pr.or(
-// 		parser.expr,
-// 		parser.num
-// )
-parser.factor = parser.num;
+parser.factor = pr.or(
+        parser.num,
+        parser.parent_factor
+    )
+    // parser.factor = parser.num;
 
 /*
  * term : factor ((MUL | DIV) factor)*
@@ -53,84 +79,9 @@ parser.term = pr.sequence(
     )
 )
 
-/*
- * expr   : term ((PLUS | MINUS) term)*      
- * term   : factor ((MUL | DIV) factor)*
- * factor : INTEGER
- */
 
-parser.expr = pr.sequence(
-    parser.term,
-    pr.zeromore(
-        pr.and(
-            parser.operater01,
-            parser.term
-        )
-    )
-)
+var mathState = state('(1+2)/(2-123)');
 
-var mathState = state('1*123**+1+2');
-
-
-var factors = pr.and(
-    parser.factor,
-    pr.literal(' ')
-);
-
-var puls = pr.many(
-    pr.and(
-        parser.operater01,
-        parser.term
-    )
-);
-var op_num = pr.and(
-        parser.factor,
-        pr.zeromore(
-            pr.and(
-                parser.operater01,
-                parser.factor
-            )
-        )
-    )
-
-var zeromore = pr.zeromore(
-            pr.and(
-                parser.operater01,
-                parser.factor
-            )
-        )
-
-var opfactor = pr.and(
-                parser.operater01,
-                parser.factor
-            );
-    //pr.literal(' ')(mathState);
-    //pr.spaces()(mathState);
-    //factors(mathState);
-    //parser.num(mathState);
-    //pr.many(pr.literal('.'))(mathState);
-    //console.log(mathState.match, mathState.pos);
-    //parser.expr(mathState);
-//parser.factor(mathState);
-//puls(mathState);
-parser.term(mathState);
-//opfactor(mathState);
-//op_num(mathState);
-//zeromore(mathState);
-
-// pr.many(
-// 	pr.and(
-// 		parser.operater02,
-// 		parser.factor
-// 		)
-// 	)(mathState);
-
-//pr.zeromore(pr.literal('1'))(mathState);
-// pr.many(
-// 	pr.and(
-// 		parser.num,
-// 		pr.literal('a')
-// 		)
-// 	)(mathState);
+parser.expr(mathState);
 
 console.log(mathState.match, mathState.success);
